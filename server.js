@@ -1,12 +1,49 @@
+require('dotenv').config()
 const express = require('express')
 const morgan = require('morgan')
+const cors = require('cors')
+const helmet = require('helmet')
+const MOVIES = require('./movie-data.json')
+
 
 const app = express()
 
 app.use(morgan('dev'))
+app.use(helmet())
+app.use(cors())
 
-app.use((req, res) => {
-    res.send('Server working')
+app.use(function validateBearerToken(req, res, next) {
+    const apiToken = process.env.API_TOKEN2
+    const authToken = req.get('Authorization')
+    
+    if (authToken || authToken.split(' ')[1] !== apiToken){
+        return res.status(401).json({error: 'Unauthorized Access'})
+    }
+
+    next()
+})
+
+app.get('/movie', function handleGetMovie(req, res) {
+    let response = MOVIES;
+   
+    if (req.query.genre){
+        response=response.filter(movie =>
+            movie.genre.toLowerCase().includes(req.query.genre.toLowerCase())
+        )
+    }
+    if (req.query.country){
+        response = response.filter(movie=>
+            movie.country.toLowerCase().includes(req.query.country.toLowerCase())
+        )
+    }
+
+    if (req.query.avg_vote){
+        response = response.filter(movie =>
+            Number(movie.avg_vote) >= Number(req.query.avg_vote)
+        )
+    }
+
+    res.json(response)
 })
 
 const PORT = 7000
@@ -14,3 +51,4 @@ const PORT = 7000
 app.listen(PORT,()=>{
     console.log(`Server is listening at https://localhost:${PORT}`)
 })
+
